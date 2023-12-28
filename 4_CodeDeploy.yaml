@@ -1,0 +1,74 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Template to Create CodeDeploy App
+
+Parameters:
+  CodeDeployAppName:
+    Type: String
+    Description: Name of CodeDeploy App
+    Default: ""
+  EnvironmentTag:
+    Type: String
+    Default: ""
+  NameTag:
+    Type: String
+    Default: ""
+
+Resources:
+  CodeDeployApp:
+    Type: AWS::CodeDeploy::Application
+    Properties: 
+      ApplicationName: !Ref CodeDeployAppName
+      ComputePlatform: Server
+      Tags: 
+        - Key: Environment
+          Value: !Ref EnvironmentTag
+        - Key: Name
+          Value: !Ref NameTag
+
+  CodeDeployDevDeploymentGroup: 
+    Type: AWS::CodeDeploy::DeploymentGroup
+    Properties: 
+      ApplicationName: !Ref CodeDeployApp
+      ServiceRoleArn: !GetAtt [ CodeDeploySrvcRole, Arn ]      
+      DeploymentGroupName: DevDeploymentGroup
+  CodeDeploySrvcRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName: CodeDeploySrvcRole
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - codedeploy.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: "CodeDeployAccessPolicy"
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - 'ec2:DescribeInstances'
+                  - 'ec2:DescribeInstanceStatus'
+                  - 'ec2:TerminateInstances'
+                  - 'tag:GetTags'
+                  - 'tag:GetResources'
+                  - 'sns:Publish'
+                  - 'cloudwatch:DescribeAlarms'
+                  - 'cloudwatch:PutMetricAlarm'
+                Resource: '*'
+
+Outputs:
+  CodeDeploySrvcRole:
+    Description: CodeDeploy Service Role Name
+    Value: !Ref CodeDeploySrvcRole
+    Export:
+      Name: CodeDeploySrvcRole
+  CodeDeployApp:
+    Description: CodeDeploy Application Name
+    Value: !Ref CodeDeployApp
+    Export:
+      Name: CodeDeployApp
